@@ -7,6 +7,12 @@ Created on Tue Feb 28 14:15:58 2023
 import matplotlib.pyplot as plt
 import numpy as np
 
+test_outer = False
+test_inner = False
+sub_test = False
+lkr_test = False
+mu_p_test = False
+
 class pconstructor:
     def __init__(self, energy = 0, theta = 0, phi = 0, origin = 0): 
         """
@@ -57,7 +63,7 @@ class pconstructor:
         self.position = [x,y,z]
         
         return self.position
-                   
+             
 class geometry:
     def __init__(self):
         """
@@ -90,6 +96,12 @@ class geometry:
                 self.z = self.range[0]
                 self.radius = info['radius']
                 self.inner_radius = info['inner_radius']
+                
+                if test_outer:
+                    self.inner_radius = 0
+                if test_inner:
+                    self.radius = 999
+                
                 return None
         
         def fit(self, pos):
@@ -141,6 +153,13 @@ class geometry:
                 self.width = info['width']
                 self.height = info['height']
                 self.inner_radius = info['inner_radius']
+                
+                if test_outer:
+                    self.inner_radius = 0
+                if test_inner:
+                    self.width = 999
+                    self.height = 999
+                    
                 return None
         
         def fit(self, pos):
@@ -176,7 +195,7 @@ class na62:
         self.c = 3*10**8
         self.p_rest = 0.2358
         self.e_rest = 0.258
-        self.beta_gamma = 75/.493
+        self.beta_gamma = (75)/.493
         self.gamma = np.sqrt(.493**2+(75)**2)/.493
         
         self.straw = self.straw()
@@ -249,22 +268,23 @@ class na62:
             
         muon = pconstructor(energy = et['m_energy'], theta = et['m_theta'], phi = et['m_phi'], origin = [0,0,et['origin']])
         neutrino = pconstructor(energy = et['n_energy'], theta = et['n_theta'], phi = et['n_phi'], origin = [0,0,et['origin']])
-
+        
         test1 = self.test_detector(self.straw, muon)
-        if test1:
-            muon = self.mu_p_kick(muon)
+        if test1 or lkr_test:
+            if not mu_p_test:
+                muon = self.mu_p_kick(muon)
             et['mp_theta'] = muon.theta
             et['mp_phi'] = muon.phi
             test0 = self.test_detector(self.straw4, muon)
-            if test0:
+            if test0 or lkr_test:
                 test2 = self.test_detector(self.rich, muon)
-                if test2:        
+                if test2 or lkr_test:        
                     test3 = self.test_detector(self.chod, muon)
-                    if test3:
+                    if test3 or lkr_test:
                         test4 = self.test_detector(self.muv3, muon)
-                        if test4:
+                        if test4 or lkr_test:
                             test5 = self.test_detector(self.lkr, neutrino)
-                            if test5:
+                            if test5 or sub_test:
                                 return True, et
     
         return False, et
@@ -318,7 +338,7 @@ class na62:
             Position of kaon decay
 
         """
-        kaon_pos = np.random.uniform(102.4, 183.316)
+        kaon_pos = np.random.uniform(102.4, 183.218)
         return kaon_pos
     
     def muon_et(self):
@@ -418,13 +438,13 @@ class na62:
     class lav:
         #decays in this region. Adding for the sake atm but kinda useless
         def __init__(self):
-            self.range = [[102.4,183.316]]
+            self.range = [[102.4,183.218]]
             self.geometry = []
             return None
     
     class straw:
         def __init__(self):
-            self.range = [[183.316,183.316]]
+            self.range = [[183.218,183.218]]
             
             ginfo = {
                 'range':self.range[0],
@@ -452,7 +472,7 @@ class na62:
         
     class rich:
         def __init__(self):
-            self.range = [[220.252, 223.73],[223.64,227.34],[227.43,232.35],[232.35,237.252]]
+            self.range = [[220.252, 223.73],[223.64,227.34],[227.43,232.35],[232.35,237.253]]
             
             ginfo0 = {
                 'range':self.range[0],
@@ -639,6 +659,7 @@ analysis.distribution([
                         'dists' : ['Muon Angle'],
                         'units' : ['Radians'],
                         'bins' : 100,
+                        'title': 'Distribution of Accepted Muon Angles'
                         },
       
                         {'distribution_type' : 'histogram',
