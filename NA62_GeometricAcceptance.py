@@ -48,9 +48,11 @@ class pconstructor:
         self.position : array
             array of positions, x,y,z.
         """
-        origin = self.origin[2]
-        x = (z-origin)*np.tan(self.theta)*np.sin(self.phi)
-        y = (z-origin)*np.tan(self.theta)/np.cos(self.phi)
+        ox = self.origin[0]
+        oy = self.origin[1]
+        oz = self.origin[2]
+        x = (z-oz)*np.tan(self.theta)*np.sin(self.phi) + ox
+        y = (z-oz)*np.tan(self.theta)*np.cos(self.phi) + oy
         
         self.position = [x,y,z]
         
@@ -175,9 +177,10 @@ class na62:
         self.p_rest = 0.2358
         self.e_rest = 0.258
         self.beta_gamma = 75/.493
-        self.gamma = np.sqrt(.493**2+75**2)/.493
+        self.gamma = np.sqrt(.493**2+(75)**2)/.493
         
         self.straw = self.straw()
+        self.straw4 = self.straw4()
         self.chod = self.chod()
         self.rich = self.rich()
         self.muv3 = self.muv3()
@@ -236,7 +239,9 @@ class na62:
               'n_energy': n_energy,
               'n_theta': n_theta,
               'n_phi': n_phi,
-              'origin': origin
+              'origin': origin,
+              'mp_theta': 0,
+              'mp_phi': 0,
             }
         
         if n_energy < self.min_neutrino_energy or mu_energy < self.min_muon_energy:
@@ -248,15 +253,19 @@ class na62:
         test1 = self.test_detector(self.straw, muon)
         if test1:
             muon = self.mu_p_kick(muon)
-            test2 = self.test_detector(self.rich, muon)
-            if test2:        
-                test3 = self.test_detector(self.chod, muon)
-                if test3:
-                    test4 = self.test_detector(self.muv3, muon)
-                    if test4:
-                        test5 = self.test_detector(self.lkr, neutrino)
-                        if test5:
-                           return True, et
+            et['mp_theta'] = muon.theta
+            et['mp_phi'] = muon.phi
+            test0 = self.test_detector(self.straw4, muon)
+            if test0:
+                test2 = self.test_detector(self.rich, muon)
+                if test2:        
+                    test3 = self.test_detector(self.chod, muon)
+                    if test3:
+                        test4 = self.test_detector(self.muv3, muon)
+                        if test4:
+                            test5 = self.test_detector(self.lkr, neutrino)
+                            if test5:
+                                return True, et
     
         return False, et
     
@@ -273,17 +282,26 @@ class na62:
         
         sinphi = np.sin(mu_phi)
         cosphi = np.cos(mu_phi)
+    
+        p = mu_energy**2 - mu_mass**2  
         
-        mu_p = mu_energy**2 - mu_mass**2
-        a = np.sqrt((mu_p*sintheta*sinphi + .270)**2 + (mu_p*sintheta*cosphi + .027)**2)
-        b = mu_p*costheta
+        det = np.sqrt(sintheta**2 * cosphi**2 + costheta**2)
+    
+        p0 = p*det
         
-        c = mu_p*sintheta*sinphi + .270
-        d = mu_p*sintheta*cosphi + .027
+        cosalpha = costheta/det
+        sinalpha = -sintheta*cosphi/det
         
-        n_mu_theta = np.arctan(a/b)
-        n_mu_phi = np.arctan(c/d)
+        wt = (1.34*6*np.sqrt(4*np.pi/137))/(10*mu_energy)
         
+        px = -p0*(np.sin(wt)*cosalpha+np.cos(wt)*sinalpha)
+        pz = p0*(np.cos(wt)*cosalpha-np.sin(wt)*sinalpha)
+        
+        a = np.sqrt(px**2 + p**2 * sintheta**2 * sinphi**2)
+        
+        n_mu_theta = np.arctan(a/pz)
+        n_mu_phi = np.arctan(px/(p*sintheta*sinphi))
+       
         mu = pconstructor(energy = mu_energy, theta = n_mu_theta, phi = n_mu_phi, origin = mu_pos)
         
         return mu
@@ -392,7 +410,7 @@ class na62:
             
             i+=1
             
-            if not t1 and not t2:
+            if not t1 or not t2:
                 return False
         
         return True
@@ -406,7 +424,21 @@ class na62:
     
     class straw:
         def __init__(self):
-            self.range = [[183.316,218.983]]
+            self.range = [[183.316,183.316]]
+            
+            ginfo = {
+                'range':self.range[0],
+                'pos': [0,0,0],
+                'radius': 1.05,
+                'inner_radius': .06
+                }
+            
+            self.geometry = [geometry.circular(ginfo)]
+            return None
+        
+    class straw4:
+        def __init__(self):
+            self.range = [[218.983,218.983]]
             
             ginfo = {
                 'range':self.range[0],
@@ -513,17 +545,24 @@ class analyse:
         data : dictionary
             Data to be analysed.
         """
+        
+        self.data = data
+        
         m_energies = [me.get('m_energy') for me in data]
         n_energies = [ne.get('n_energy') for ne in data]
         m_theta = [mt.get('m_theta') for mt in data]
         n_theta = [nt.get('n_theta') for nt in data]
         origin = [mo.get('origin') for mo in data]
+        mp_theta = [mpt.get('mp_theta') for mpt in data]
+        mp_phi = [mpp.get('mp_phi') for mpp in data]
         
         self.distributions = {'Muon Energy' : m_energies,
                               'Neutrino Energy' : n_energies,
                               'Muon Angle' : m_theta,
                               'Neutrino Angle' : n_theta,
                               'Origin': origin,
+                              'Muon Kick Angle': mp_theta,
+                              'Muon Kick Rotational Angle': mp_phi,
                               }
         
     def distribution(self, data):
@@ -551,7 +590,11 @@ class analyse:
             
                 plt.xlabel(f'{info["dists"][0]} ({info["units"][0]})')
                 plt.ylabel('Count')
-                plt.title(f'Distribution of Accepted {info["dists"][0]}')
+                
+                if 'title' in info:
+                    plt.title(info['title'])
+                else:   
+                    plt.title(f'Distribution of Accepted {info["dists"][0]}')
             
                 plt.show()
             
@@ -565,19 +608,33 @@ class analyse:
                 
                 plt.xlabel(f'{info["dists"][0]} ({info["units"][0]})')
                 plt.ylabel(f'{info["dists"][1]} ({info["units"][1]})')
-                plt.title(f'{info["dists"][0]} vs {info["dists"][1]}')
+                
+                if 'title' in info:
+                    plt.title(info['title'])
+                else:   
+                    plt.title(f'{info["dists"][0]} vs {info["dists"][1]}')
+                
                 
                 plt.show()
         return
     
+    def shelf(self, filename, distn):
+        file = open(f'{filename}.txt', 'w')
+        data = [f"{dis.get(distn)} \n" for dis in self.data]      
+        file.writelines(data)
+        file.close()
+        
+        return file
+        
 detector = na62()
 
-nevents = 100000 #roughly 3 seconds for 50,000 events
+nevents = 100000
 nsuccess, et_data = detector.simulate(nevents)
 print(nsuccess/nevents)
 
+analysis = analyse(et_data[0])
 
-analyse(et_data[0]).distribution([
+analysis.distribution([
                         {'distribution_type' : 'histogram',
                         'dists' : ['Muon Angle'],
                         'units' : ['Radians'],
@@ -613,6 +670,20 @@ analyse(et_data[0]).distribution([
                          'units' : ['Radians', 'GeV'],
                          'bins' : 100,
                          },
+                        {'distribution_type' : 'scatter',
+                         'dists' : ['Origin','Muon Energy'],
+                         'units' : ['Meters', 'GeV'],
+                         'bins' : 100,
+                        },
                         
+                        {'distribution_type' : 'scatter',
+                         'dists' : ['Muon Kick Angle','Muon Energy'],
+                         'units' : ['Radians', 'GeV'],
+                         'bins' : 100,
+                         },
+                        {'distribution_type' : 'scatter',
+                         'dists' : ['Muon Kick Rotational Angle','Muon Energy'],
+                         'units' : ['Radians', 'GeV'],
+                         'bins' : 100,
+                         }
                         ])
-    
