@@ -290,6 +290,9 @@ class na62:
         return False, et
     
     def mu_p_kick(self, mu):
+        """
+        Gives the muon a momentum kick due to the magnetic field located at z=200
+        """
         z = 200
         mu_mass = .1057
         mu_pos = mu.move(z)  
