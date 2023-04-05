@@ -7,10 +7,11 @@ Created on Tue Feb 28 14:15:58 2023
 import matplotlib.pyplot as plt
 import numpy as np
 
+#tests for contributions
 test_outer = False
 test_inner = False
 sub_test = False
-lkr_test = False
+lkr_test = True
 mu_p_test = False
 
 class pconstructor:
@@ -282,7 +283,8 @@ class na62:
                     test3 = self.test_detector(self.chod, muon)
                     if test3 or lkr_test:
                         test4 = self.test_detector(self.muv3, muon)
-                        if test4 or lkr_test:
+                        test04 = self.test_detector(self.muv3, neutrino)
+                        if test4 and test04 or lkr_test:
                             test5 = self.test_detector(self.lkr, neutrino)
                             if test5 or sub_test:
                                 return True, et
@@ -290,9 +292,6 @@ class na62:
         return False, et
     
     def mu_p_kick(self, mu):
-        """
-        Gives the muon a momentum kick due to the magnetic field located at z=200
-        """
         z = 200
         mu_mass = .1057
         mu_pos = mu.move(z)  
@@ -651,7 +650,7 @@ class analyse:
         
 detector = na62()
 
-nevents = 100000
+nevents = 1000000
 nsuccess, et_data = detector.simulate(nevents)
 print(nsuccess/nevents)
 
