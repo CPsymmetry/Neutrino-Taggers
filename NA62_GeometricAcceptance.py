@@ -11,7 +11,7 @@ import numpy as np
 test_outer = False
 test_inner = False
 sub_test = False
-lkr_test = True
+lkr_test = False
 mu_p_test = False
 
 class pconstructor:
