@@ -10,9 +10,21 @@ import numpy as np
 #tests for contributions
 test_outer = False
 test_inner = False
-sub_test = False
-lkr_test = False
 mu_p_test = False
+
+straw_test = False
+muv3_neu_test = True
+muv3_test = False
+lkr_test = False
+
+sub_test = False
+
+if straw_test or muv3_test or lkr_test or muv3_neu_test:
+    sub_test = True
+
+
+
+
 
 class pconstructor:
     def __init__(self, energy = 0, theta = 0, phi = 0, origin = 0): 
@@ -196,8 +208,8 @@ class na62:
         self.c = 3*10**8
         self.p_rest = 0.2358
         self.e_rest = 0.258
-        self.beta_gamma = (75)/.493
-        self.gamma = np.sqrt(.493**2+(75)**2)/.493
+        self.beta_gamma = (75+1.2)/.493
+        self.gamma = np.sqrt(.493**2+(75+1.2)**2)/.493
         
         self.straw = self.straw()
         self.straw4 = self.straw4()
@@ -269,26 +281,60 @@ class na62:
             
         muon = pconstructor(energy = et['m_energy'], theta = et['m_theta'], phi = et['m_phi'], origin = [0,0,et['origin']])
         neutrino = pconstructor(energy = et['n_energy'], theta = et['n_theta'], phi = et['n_phi'], origin = [0,0,et['origin']])
-        
-        test1 = self.test_detector(self.straw, muon)
-        if test1 or lkr_test:
-            if not mu_p_test:
-                muon = self.mu_p_kick(muon)
+        if not sub_test: 
+            test1 = self.test_detector(self.straw, muon)
+            if test1:
+                if not mu_p_test:
+                    muon = self.mu_p_kick(muon)
+                    et['mp_theta'] = muon.theta
+                    et['mp_phi'] = muon.phi
+                    test0 = self.test_detector(self.straw4, muon)
+                    if test0:
+                        test2 = self.test_detector(self.rich, muon)
+                        if test2:        
+                            test3 = self.test_detector(self.chod, muon)
+                            if test3:
+                                test4 = self.test_detector(self.muv3, muon)
+                                test04 = self.test_detector(self.muv3, neutrino)
+                                if test4 and test04:
+                                    test5 = self.test_detector(self.lkr, neutrino)
+                                    if test5:
+                                        return True, et
+        elif lkr_test:
+            muon = self.mu_p_kick(muon)
+            et['mp_theta'] = muon.theta
+            et['mp_phi'] = muon.phi
+            test5 = self.test_detector(self.lkr, neutrino)
+            if test5:
+                return True, et
+                
+        elif muv3_test:
+            muon = self.mu_p_kick(muon)
+            et['mp_theta'] = muon.theta
+            et['mp_phi'] = muon.phi
+            test4 = self.test_detector(self.muv3, muon)
+            test04 = self.test_detector(self.muv3, neutrino)
+            if test4 and test04:
+                return True, et
+                
+        elif muv3_neu_test:
+            muon = self.mu_p_kick(muon)
+            et['mp_theta'] = muon.theta
+            et['mp_phi'] = muon.phi
+            test04 = self.test_detector(self.muv3, muon)
+            if test04:
+                return True, et
+            
+        elif straw_test:
+            test1 = self.test_detector(self.straw, muon)
+            muon = self.mu_p_kick(muon)
             et['mp_theta'] = muon.theta
             et['mp_phi'] = muon.phi
             test0 = self.test_detector(self.straw4, muon)
-            if test0 or lkr_test:
-                test2 = self.test_detector(self.rich, muon)
-                if test2 or lkr_test:        
-                    test3 = self.test_detector(self.chod, muon)
-                    if test3 or lkr_test:
-                        test4 = self.test_detector(self.muv3, muon)
-                        test04 = self.test_detector(self.muv3, neutrino)
-                        if test4 and test04 or lkr_test:
-                            test5 = self.test_detector(self.lkr, neutrino)
-                            if test5 or sub_test:
-                                return True, et
-    
+            if test1 and test0:
+                return True, et
+            
+            
         return False, et
     
     def mu_p_kick(self, mu):
@@ -646,11 +692,10 @@ class analyse:
         file.writelines(data)
         file.close()
         
-        return file
         
 detector = na62()
 
-nevents = 1000000
+nevents = 100000
 nsuccess, et_data = detector.simulate(nevents)
 print(nsuccess/nevents)
 
