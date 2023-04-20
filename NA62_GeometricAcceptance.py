@@ -2,7 +2,7 @@
 """
 Created on Tue Feb 28 14:15:58 2023
 
-@author: Taylor c.
+@author: Taylor C.
 """
 import matplotlib.pyplot as plt
 import numpy as np
