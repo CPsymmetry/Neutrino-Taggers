@@ -1,0 +1,13 @@
+cff-version: 1.0
+authors:
+- family-names: "Coggins"
+  given-names: "Taylor"
+- family-names: "Lake"
+  given-names: "Sophie"
+- family-names: "Shipley"
+  given-names: "Noel"
+title: "Neutrino Tagger Simulations"
+version: 1.0
+doi: 10.5072/zenodo.1184974
+date-released: 2023-04-20
+url: "https://github.com/CPsymmetry/Neutrino-Taggers"
