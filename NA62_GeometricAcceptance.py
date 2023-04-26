@@ -2,18 +2,18 @@
 """
 Created on Tue Feb 28 14:15:58 2023
 
-@author: Taylor C.
+@author: Taylor c.
 """
 import matplotlib.pyplot as plt
 import numpy as np
 
-#tests for contributions
+#tests for contributions. Set all to false for a normal run.
 test_outer = False
 test_inner = False
 mu_p_test = False
 
 straw_test = False
-muv3_neu_test = True
+muv3_neu_test = False
 muv3_test = False
 lkr_test = False
 
@@ -21,10 +21,6 @@ sub_test = False
 
 if straw_test or muv3_test or lkr_test or muv3_neu_test:
     sub_test = True
-
-
-
-
 
 class pconstructor:
     def __init__(self, energy = 0, theta = 0, phi = 0, origin = 0): 
@@ -198,7 +194,7 @@ class geometry:
                 return False
 
 class na62:
-    def __init__(self):
+    def __init__(self, dif=None, decay=None):
         """
         NA62 Detector geometric acceptance and event selection class.
 
@@ -211,11 +207,12 @@ class na62:
         self.beta_gamma = (75+1.2)/.493
         self.gamma = np.sqrt(.493**2+(75+1.2)**2)/.493
         
+        self.lav = self.lav(decay)
         self.straw = self.straw()
         self.straw4 = self.straw4()
         self.chod = self.chod()
         self.rich = self.rich()
-        self.muv3 = self.muv3()
+        self.muv3 = self.muv3(dif)
         self.lkr = self.lkr()
         
     def simulate(self, pnum):
@@ -289,17 +286,17 @@ class na62:
                     et['mp_theta'] = muon.theta
                     et['mp_phi'] = muon.phi
                     test0 = self.test_detector(self.straw4, muon)
-                    if test0:
-                        test2 = self.test_detector(self.rich, muon)
-                        if test2:        
-                            test3 = self.test_detector(self.chod, muon)
-                            if test3:
-                                test4 = self.test_detector(self.muv3, muon)
-                                test04 = self.test_detector(self.muv3, neutrino)
-                                if test4 and test04:
-                                    test5 = self.test_detector(self.lkr, neutrino)
-                                    if test5:
-                                        return True, et
+                if test0:
+                    test2 = self.test_detector(self.rich, muon)
+                    if test2:        
+                        test3 = self.test_detector(self.chod, muon)
+                        if test3:
+                            test4 = self.test_detector(self.muv3, muon)
+                            test04 = self.test_detector(self.muv3, neutrino)
+                            if test4 and test04:
+                                test5 = self.test_detector(self.lkr, neutrino)
+                                if test5:
+                                    return True, et
         elif lkr_test:
             muon = self.mu_p_kick(muon)
             et['mp_theta'] = muon.theta
@@ -374,8 +371,7 @@ class na62:
         
         return mu
     
-    @staticmethod
-    def kaon_decay_pos():
+    def kaon_decay_pos(self):
         """
         Creates a random decay position of the kaon dependent on a uniform distribution.
         Actual kaon decay has a poisson distribution but difference is negligable.
@@ -386,7 +382,10 @@ class na62:
             Position of kaon decay
 
         """
-        kaon_pos = np.random.uniform(102.4, 183.218)
+        tab = self.lav.range[0]
+        lower = tab[0]
+        upper = tab[1]
+        kaon_pos = np.random.uniform(lower, upper)
         return kaon_pos
     
     def muon_et(self):
@@ -485,8 +484,10 @@ class na62:
     
     class lav:
         #decays in this region. Adding for the sake atm but kinda useless
-        def __init__(self):
+        def __init__(self, decay):
             self.range = [[102.4,183.218]]
+            if decay != None:
+                self.range = [decay]
             self.geometry = []
             return None
     
@@ -575,8 +576,9 @@ class na62:
             return None
 
     class muv3:
-        def __init__(self):
+        def __init__(self, dif):
             self.range = [[246.8, 246.85]]
+            
             
             ginfo = {
                 'range':self.range[0],
@@ -585,6 +587,15 @@ class na62:
                 'height':1.32,
                 'inner_radius': .084
                 }
+            
+            if dif != None:
+               ginfo = {
+                   'range':self.range[0],
+                   'pos': [0,0,0],
+                   'width':dif,
+                   'height':dif,
+                   'inner_radius': .084
+                   } 
             
             self.geometry = [geometry.rectangular(ginfo)]
             return None
@@ -690,9 +701,69 @@ class analyse:
         file = open(f'{filename}.txt', 'w')
         data = [f"{dis.get(distn)} \n" for dis in self.data]      
         file.writelines(data)
-        file.close()
+        file.close()             
         
-        
+def muv3_size(max_size):
+    """
+    Changes the size of the MUV3 detector and plots a graph of the geometric
+    acceptance.
+    
+    Parameters
+    ----------
+    max_size : flaat
+        The minimum of the initial position.
+    """
+    ga = []
+    x = np.linspace(132, max_size, 1000)
+    for i in x:
+        detector = na62(i)
+        nevents = 10000
+        nsuccess, et_data = detector.simulate(nevents)
+        nse = nsuccess/nevents
+        ga.append(nse)
+
+    fig, ax = plt.subplots()
+    x = [i for i in range(132, max_size)]    
+    ax.scatter(x,ga, s= .1)
+    plt.title('MUV3 Size vs Geometric Acceptance')
+    plt.ylabel('Geometric Acceptance')
+    plt.xlabel('MUV3 Size (Meters)') 
+    plt.show()
+
+def decay_size(lower, upper):
+    """
+    Changes the length of the decay chamber by extending back the initial position.
+    Final position is constant. Geometric acceptence and decay length are then 
+    plotted.
+    
+    Parameters
+    ----------
+    lower : Int
+        The minimum of the initial position.
+    upper : Int
+        The maximum of the initial position.
+    """
+    maximum = 183.218
+    ga = []
+    x = np.linspace(lower, upper, 1000)
+    for i in x:
+        detector = na62(decay = [i, maximum])
+        nevents = 10000
+        nsuccess, et_data = detector.simulate(nevents)
+        nse = nsuccess/nevents
+        ga.append(nse)
+        print(nse)
+
+    fig, ax = plt.subplots()  
+    ax.scatter(x,ga, s= .1)
+    plt.title('Decay Length vs Geometric Acceptance')
+    plt.ylabel('Geometric Acceptance')
+    plt.xlabel('Decay Length (Meters)') 
+    plt.show()
+
+
+#Below is the code used to plot all the graphs
+"""
 detector = na62()
 
 nevents = 100000
@@ -755,3 +826,4 @@ analysis.distribution([
                          'bins' : 100,
                          }
                         ])
+"""
