@@ -204,8 +204,8 @@ class na62:
         self.c = 3*10**8
         self.p_rest = 0.2358
         self.e_rest = 0.258
-        self.beta_gamma = (75+1.2)/.493
-        self.gamma = np.sqrt(.493**2+(75+1.2)**2)/.493
+        self.beta_gamma = (75)/.493
+        self.gamma = np.sqrt(.493**2+(75)**2)/.493
         
         self.lav = self.lav(decay)
         self.straw = self.straw()
